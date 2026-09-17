@@ -1,0 +1,48 @@
+#Lab Information
+
+Platform: PortSwigger Web Security Academy
+Lab: SQL injection vulnerability allowing login bypass
+Target: PortSwigger Web Security Academy lab environment
+Environment: iPhone + iSH + Alpine Linux
+Tools: curl, grep, sed
+Status: Solved
+
+⸻
+
+#Objective
+
+The objective of this lab was to exploit a SQL injection vulnerability in the application’s login mechanism and authenticate as the administrator user without knowing the legitimate password.
+
+The entire lab was performed from an iPhone using iSH rather than a traditional desktop penetration-testing environment.
+
+⸻
+
+1. Reconnaissance
+
+I started by sending an HTTP request to the target using curl:
+curl -i "https://TARGET/"
+The response confirmed that the target was a PortSwigger SQL injection lab.
+
+I then investigated the application’s login functionality and identified the /login endpoint.
+
+⸻
+
+2. Identifying the Login Form
+
+The login page was retrieved with:
+curl -s "https://TARGET/login"
+The HTML contained a login form using the POST method:
+<form class=login-form method=POST action="/login">
+The form accepted three relevant parameters:
+csrf
+username
+password
+This established that authentication was performed through:
+POST /login
+environment.
+
+⸻
+
+3. Handling the CSRF Token
+
+The application included a CSRF token, so I first retrieved the login page while saving the session cookies:
