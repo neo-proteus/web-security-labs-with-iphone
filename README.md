@@ -1,4 +1,4 @@
-# 📱 Web Security Labs — From an iPhone
+# 📱 Web Security Labs From an iPhone
 
 > **Can you learn and practice web security without a PC?**
 
