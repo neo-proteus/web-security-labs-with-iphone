@@ -22,3 +22,20 @@ It's to prove something simpler:
 
 > **You don't need perfect equipment to start learning cybersecurity.**
 
+## Toolkit
+
+**iPhone** — Primary device
+
+**iSH** — Linux environment running on iOS
+
+**Alpine Linux** — Lightweight Linux userspace
+
+**curl** — HTTP requests and web application testing
+
+**grep** — Searching and analyzing HTML and HTTP responses
+
+**sed** — Extracting and processing data from responses
+
+**Cookies** — Managing and maintaining web sessions
+
+**PortSwigger Web Security Academy** — Authorized vulnerable web applications and training labs
