@@ -24,18 +24,18 @@ It's to prove something simpler:
 
 ## Toolkit
 
-**iPhone** — Primary device
+**iPhone** - Primary device
 
-**iSH** — Linux environment running on iOS
+**iSH** - Linux environment running on iOS
 
-**Alpine Linux** — Lightweight Linux userspace
+**Alpine Linux** - Lightweight Linux userspace
 
-**curl** — HTTP requests and web application testing
+**curl** - HTTP requests and web application testing
 
-**grep** — Searching and analyzing HTML and HTTP responses
+**grep** - Searching and analyzing HTML and HTTP responses
 
-**sed** — Extracting and processing data from responses
+**sed** - Extracting and processing data from responses
 
-**Cookies** — Managing and maintaining web sessions
+**Cookies** - Managing and maintaining web sessions
 
-**PortSwigger Web Security Academy** — Authorized vulnerable web applications and training labs
+**PortSwigger Web Security Academy** - Authorized vulnerable web applications and training labs
